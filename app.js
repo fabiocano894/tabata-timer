@@ -350,7 +350,7 @@ function addExerciseRow(name = '') {
   const btn = document.createElement('button');
   btn.className   = 'btn-remove';
   btn.textContent = '×';
-  btn.addEventListener('click', () => row.remove());
+  btn.addEventListener('click', () => { row.remove(); updateTotalDisplay(); });
 
   row.append(input, btn);
   list.appendChild(row);
@@ -378,18 +378,63 @@ function showView(name) {
   document.getElementById('view-timer').classList.toggle('active',  name === 'timer');
 }
 
+// ── Total time calculation ─────────────────────────────────────────────────
+function calculateTotalTime(cfg) {
+  let total = cfg.prepTime;
+
+  if (cfg.mode === 'pyramid') {
+    cfg.pyramidLevels.forEach((level, i) => {
+      total += level.length * cfg.workTime;
+      total += (level.length - 1) * cfg.restTime;
+      if (i < cfg.pyramidLevels.length - 1) total += cfg.breakTime;
+    });
+  } else {
+    const n = cfg.exercises.length;
+    total += cfg.rounds * (n * cfg.workTime + (n - 1) * cfg.restTime);
+    total += (cfg.rounds - 1) * cfg.breakTime;
+  }
+
+  return total;
+}
+
+function formatDuration(seconds) {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  if (h > 0) return `${h}h ${String(m).padStart(2, '0')}m ${String(s).padStart(2, '0')}s`;
+  if (m > 0) return `${m}m ${String(s).padStart(2, '0')}s`;
+  return `${s}s`;
+}
+
+function updateTotalDisplay() {
+  const cfg   = buildConfig();
+  const total = calculateTotalTime(cfg);
+  document.querySelector('#session-total span').textContent = formatDuration(total);
+}
+
 // ── Init ───────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   addExerciseRow('Exercise 1');
 
   document.querySelectorAll('.mode-btn').forEach(btn =>
-    btn.addEventListener('click', () => setMode(btn.dataset.mode))
+    btn.addEventListener('click', () => { setMode(btn.dataset.mode); updateTotalDisplay(); })
   );
 
-  document.getElementById('btn-add-exercise').addEventListener('click', () => addExerciseRow());
+  // Recalculate total whenever any config input changes
+  document.getElementById('view-config').addEventListener('input', updateTotalDisplay);
+
+  // Also recalculate when exercises are added or removed
+  const origAdd = addExerciseRow;
+  document.getElementById('btn-add-exercise').addEventListener('click', () => {
+    addExerciseRow();
+    updateTotalDisplay();
+  });
+
   document.getElementById('btn-load-config').addEventListener('click', loadConfig);
   document.getElementById('btn-save-config').addEventListener('click', saveConfig);
   document.getElementById('btn-start').addEventListener('click', startSession);
   document.getElementById('btn-pause').addEventListener('click', pauseSession);
   document.getElementById('btn-reset').addEventListener('click', resetSession);
+
+  updateTotalDisplay();
 });

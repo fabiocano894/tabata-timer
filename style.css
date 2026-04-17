@@ -131,6 +131,16 @@ input[type="text"] { width: 160px; text-align: left; }
 #file-status.ok  { color: #4cd964; }
 #file-status.err { color: #ff453a; }
 
+#session-total {
+  text-align: center;
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+#session-total span {
+  color: var(--text);
+  font-weight: 700;
+}
+
 .btn-primary, .btn-secondary {
   border: none;
   border-radius: var(--radius);
