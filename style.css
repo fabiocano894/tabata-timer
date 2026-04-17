@@ -76,6 +76,33 @@ input[type="text"] { width: 160px; text-align: left; }
   line-height: 1;
 }
 
+.file-actions {
+  display: flex;
+  gap: 10px;
+}
+.btn-file {
+  flex: 1;
+  border: 1px solid #3a3a3c;
+  border-radius: var(--radius);
+  background: #2c2c2e;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 10px;
+  cursor: pointer;
+  transition: color .15s, border-color .15s;
+}
+.btn-file:hover { color: var(--text); border-color: #888; }
+
+#file-status {
+  font-size: 0.8rem;
+  color: var(--muted);
+  text-align: center;
+  min-height: 1.2em;
+}
+#file-status.ok  { color: #4cd964; }
+#file-status.err { color: #ff453a; }
+
 .btn-primary, .btn-secondary {
   border: none;
   border-radius: var(--radius);

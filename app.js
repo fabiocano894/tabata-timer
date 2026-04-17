@@ -31,6 +31,67 @@ function announce(text) {
   window.speechSynthesis.speak(u);
 }
 
+// ── File persistence (File System Access API) ─────────────────────────────
+let fileHandle = null;
+
+const FILE_TYPES = [{ description: 'JSON', accept: { 'application/json': ['.json'] } }];
+
+function setFileStatus(msg, type = '') {
+  const el = document.getElementById('file-status');
+  el.textContent = msg;
+  el.className   = type;
+}
+
+function fillForm(cfg) {
+  document.getElementById('cfg-prep').value   = cfg.prepTime  ?? 10;
+  document.getElementById('cfg-work').value   = cfg.workTime  ?? 20;
+  document.getElementById('cfg-rest').value   = cfg.restTime  ?? 10;
+  document.getElementById('cfg-break').value  = cfg.breakTime ?? 60;
+  document.getElementById('cfg-rounds').value = cfg.rounds    ?? 8;
+
+  const list = document.getElementById('exercise-list');
+  list.innerHTML = '';
+  const exercises = cfg.exercises?.length ? cfg.exercises : ['Exercise 1'];
+  exercises.forEach(name => addExerciseRow(name));
+}
+
+async function loadConfig() {
+  if (!window.showOpenFilePicker) {
+    setFileStatus('File System API not supported in this browser.', 'err');
+    return;
+  }
+  try {
+    [fileHandle] = await window.showOpenFilePicker({ types: FILE_TYPES });
+    const file   = await fileHandle.getFile();
+    const cfg    = JSON.parse(await file.text());
+    fillForm(cfg);
+    setFileStatus(`Loaded: ${file.name}`, 'ok');
+  } catch (e) {
+    if (e.name !== 'AbortError') setFileStatus('Failed to load file.', 'err');
+  }
+}
+
+async function saveConfig() {
+  if (!window.showSaveFilePicker) {
+    setFileStatus('File System API not supported in this browser.', 'err');
+    return;
+  }
+  try {
+    if (!fileHandle) {
+      fileHandle = await window.showSaveFilePicker({
+        suggestedName: 'tabata-config.json',
+        types: FILE_TYPES,
+      });
+    }
+    const writable = await fileHandle.createWritable();
+    await writable.write(JSON.stringify(buildConfig(), null, 2));
+    await writable.close();
+    setFileStatus(`Saved: ${fileHandle.name}`, 'ok');
+  } catch (e) {
+    if (e.name !== 'AbortError') setFileStatus('Failed to save file.', 'err');
+  }
+}
+
 // ── State ──────────────────────────────────────────────────────────────────
 const PHASES = { PREP: 'prep', WORK: 'work', REST: 'rest', BREAK: 'break', DONE: 'done' };
 
@@ -235,6 +296,8 @@ document.addEventListener('DOMContentLoaded', () => {
   addExerciseRow('Exercise 1');
 
   document.getElementById('btn-add-exercise').addEventListener('click', () => addExerciseRow());
+  document.getElementById('btn-load-config').addEventListener('click', loadConfig);
+  document.getElementById('btn-save-config').addEventListener('click', saveConfig);
   document.getElementById('btn-start').addEventListener('click', startSession);
   document.getElementById('btn-pause').addEventListener('click', pauseSession);
   document.getElementById('btn-reset').addEventListener('click', resetSession);
