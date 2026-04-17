@@ -13,6 +13,16 @@
     <h1>Tabata Timer</h1>
 
     <section class="card">
+      <h2>Mode</h2>
+      <input type="hidden" id="cfg-mode" value="standard" />
+      <div class="mode-toggle">
+        <button type="button" class="mode-btn active" data-mode="standard">Standard</button>
+        <button type="button" class="mode-btn" data-mode="pyramid">Pyramid ▲▼</button>
+      </div>
+      <p class="mode-hint" id="mode-hint">Cycle through all exercises each round.</p>
+    </section>
+
+    <section class="card" id="cfg-rounds-section">
       <h2>Session</h2>
       <label>Rounds
         <input type="number" id="cfg-rounds" min="1" max="99" value="8" />
@@ -30,7 +40,7 @@
       <label>Rest
         <input type="number" id="cfg-rest" min="0" max="300" value="10" />
       </label>
-      <label>Round Break
+      <label>Level Break
         <input type="number" id="cfg-break" min="0" max="300" value="60" />
       </label>
     </section>
@@ -55,8 +65,9 @@
     <div id="phase-label">GET READY</div>
     <div id="exercise-name"></div>
     <div id="countdown">10</div>
+    <div id="level-exercises"></div>
     <div id="progress-info">
-      Round <span id="cur-round">1</span> / <span id="tot-rounds">8</span>
+      <span id="lbl-round">Round</span> <span id="cur-round">1</span> / <span id="tot-rounds">8</span>
       &nbsp;·&nbsp;
       Exercise <span id="cur-exercise">1</span> / <span id="tot-exercises">1</span>
     </div>

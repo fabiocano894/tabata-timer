@@ -76,6 +76,34 @@ input[type="text"] { width: 160px; text-align: left; }
   line-height: 1;
 }
 
+/* Mode toggle */
+.mode-toggle {
+  display: flex;
+  gap: 6px;
+}
+.mode-btn {
+  flex: 1;
+  background: #2c2c2e;
+  border: 1px solid #3a3a3c;
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 10px;
+  cursor: pointer;
+  transition: color .15s, border-color .15s, background .15s;
+}
+.mode-btn.active {
+  background: #0a84ff22;
+  border-color: #0a84ff;
+  color: #0a84ff;
+}
+.mode-hint {
+  font-size: 0.82rem;
+  color: var(--muted);
+  text-align: center;
+}
+
 .file-actions {
   display: flex;
   gap: 10px;
@@ -159,6 +187,41 @@ input[type="text"] { width: 160px; text-align: left; }
   margin-top: 8px;
 }
 .timer-controls .btn-secondary { flex: 1; }
+
+/* Pyramid level exercises display */
+#level-exercises {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  min-height: 2em;
+  font-size: 0.88rem;
+}
+.ex-chip {
+  background: #2c2c2e;
+  border: 1px solid #3a3a3c;
+  border-radius: 6px;
+  padding: 3px 10px;
+  color: var(--muted);
+  transition: background .2s, color .2s, border-color .2s;
+}
+.ex-chip.ex-active {
+  background: #4cd96422;
+  border-color: #4cd964;
+  color: #4cd964;
+  font-weight: 700;
+}
+.ex-sep {
+  color: #444;
+  font-size: 0.75rem;
+  padding: 0 2px;
+}
+.ex-next-label {
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin-right: 4px;
+}
 
 /* Phase colours applied to phase-label + countdown */
 body.phase-prep    #phase-label, body.phase-prep    #countdown { color: var(--prep);  }

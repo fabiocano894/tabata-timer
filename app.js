@@ -10,8 +10,8 @@ function getAudioCtx() {
 
 function playBeep(freq = 880, duration = 0.12) {
   try {
-    const ctx = getAudioCtx();
-    const osc = ctx.createOscillator();
+    const ctx  = getAudioCtx();
+    const osc  = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.connect(gain);
     gain.connect(ctx.destination);
@@ -48,6 +48,8 @@ function fillForm(cfg) {
   document.getElementById('cfg-rest').value   = cfg.restTime  ?? 10;
   document.getElementById('cfg-break').value  = cfg.breakTime ?? 60;
   document.getElementById('cfg-rounds').value = cfg.rounds    ?? 8;
+
+  if (cfg.mode) setMode(cfg.mode);
 
   const list = document.getElementById('exercise-list');
   list.innerHTML = '';
@@ -104,91 +106,118 @@ function buildConfig() {
     .map(i => i.value.trim() || 'Exercise');
   if (exercises.length === 0) exercises.push('Exercise');
 
-  return {
-    prepTime:   parseInt(document.getElementById('cfg-prep').value,  10) || 0,
-    workTime:   parseInt(document.getElementById('cfg-work').value,  10) || 20,
-    restTime:   parseInt(document.getElementById('cfg-rest').value,  10) || 10,
-    breakTime:  parseInt(document.getElementById('cfg-break').value, 10) || 60,
+  const mode = document.getElementById('cfg-mode').value;
+
+  const base = {
+    mode,
+    prepTime:   parseInt(document.getElementById('cfg-prep').value,   10) || 0,
+    workTime:   parseInt(document.getElementById('cfg-work').value,   10) || 20,
+    restTime:   parseInt(document.getElementById('cfg-rest').value,   10) || 10,
+    breakTime:  parseInt(document.getElementById('cfg-break').value,  10) || 60,
     rounds:     parseInt(document.getElementById('cfg-rounds').value, 10) || 8,
     exercises,
   };
+
+  if (mode === 'pyramid') {
+    const n      = exercises.length;
+    const levels = [];
+    for (let i = 0;     i < n;     i++) levels.push(exercises.slice(0, i + 1));
+    for (let i = n - 2; i >= 0;    i--) levels.push(exercises.slice(0, i + 1));
+    base.pyramidLevels = levels;
+  }
+
+  return base;
 }
 
 function initialState(cfg) {
-  return {
-    phase:      cfg.prepTime > 0 ? PHASES.PREP : PHASES.WORK,
-    timeLeft:   cfg.prepTime > 0 ? cfg.prepTime : cfg.workTime,
-    round:      1,
-    exerciseIdx: 0,
-    paused:     false,
-  };
+  const startPhase = cfg.prepTime > 0 ? PHASES.PREP : PHASES.WORK;
+  const startTime  = cfg.prepTime > 0 ? cfg.prepTime : cfg.workTime;
+
+  if (cfg.mode === 'pyramid') {
+    return { phase: startPhase, timeLeft: startTime, levelIdx: 0, exerciseIdx: 0, paused: false };
+  }
+  return { phase: startPhase, timeLeft: startTime, round: 1, exerciseIdx: 0, paused: false };
 }
 
-// ── Phase transitions ──────────────────────────────────────────────────────
+// ── Phase transitions — Standard ───────────────────────────────────────────
 function nextPhase() {
+  if (config.mode === 'pyramid') { nextPhasePyramid(); return; }
+
   const cfg = config;
   const s   = state;
   const lastExercise = s.exerciseIdx === cfg.exercises.length - 1;
   const lastRound    = s.round === cfg.rounds;
 
   if (s.phase === PHASES.PREP) {
-    s.phase    = PHASES.WORK;
-    s.timeLeft = cfg.workTime;
-    announce('Work!');
-    return;
+    s.phase = PHASES.WORK; s.timeLeft = cfg.workTime; announce('Work!'); return;
   }
 
   if (s.phase === PHASES.WORK) {
     if (lastExercise) {
       if (lastRound) {
-        s.phase    = PHASES.DONE;
-        s.timeLeft = 0;
-        announce('Session complete! Great job!');
-        return;
+        s.phase = PHASES.DONE; s.timeLeft = 0; announce('Session complete! Great job!'); return;
       }
       if (cfg.breakTime > 0) {
-        s.phase    = PHASES.BREAK;
-        s.timeLeft = cfg.breakTime;
-        announce('Round break!');
-        return;
+        s.phase = PHASES.BREAK; s.timeLeft = cfg.breakTime; announce('Round break!'); return;
       }
-      // no break — start next round
-      s.round++;
-      s.exerciseIdx = 0;
-      s.phase    = PHASES.WORK;
-      s.timeLeft = cfg.workTime;
-      announce('Work!');
-      return;
+      s.round++; s.exerciseIdx = 0;
+      s.phase = PHASES.WORK; s.timeLeft = cfg.workTime; announce('Work!'); return;
     }
-    // more exercises in this round
     if (cfg.restTime > 0) {
-      s.phase    = PHASES.REST;
-      s.timeLeft = cfg.restTime;
-      announce('Rest!');
-      return;
+      s.phase = PHASES.REST; s.timeLeft = cfg.restTime; announce('Rest!'); return;
     }
-    s.exerciseIdx++;
-    s.phase    = PHASES.WORK;
-    s.timeLeft = cfg.workTime;
-    announce('Work!');
-    return;
+    s.exerciseIdx++; s.phase = PHASES.WORK; s.timeLeft = cfg.workTime; announce('Work!'); return;
   }
 
   if (s.phase === PHASES.REST) {
-    s.exerciseIdx++;
-    s.phase    = PHASES.WORK;
-    s.timeLeft = cfg.workTime;
-    announce('Work!');
-    return;
+    s.exerciseIdx++; s.phase = PHASES.WORK; s.timeLeft = cfg.workTime; announce('Work!'); return;
   }
 
   if (s.phase === PHASES.BREAK) {
-    s.round++;
-    s.exerciseIdx = 0;
-    s.phase    = PHASES.WORK;
-    s.timeLeft = cfg.workTime;
-    announce('Work!');
-    return;
+    s.round++; s.exerciseIdx = 0;
+    s.phase = PHASES.WORK; s.timeLeft = cfg.workTime; announce('Work!'); return;
+  }
+}
+
+// ── Phase transitions — Pyramid ────────────────────────────────────────────
+function nextPhasePyramid() {
+  const cfg    = config;
+  const s      = state;
+  const levels = cfg.pyramidLevels;
+  const level  = levels[s.levelIdx];
+  const lastEx = s.exerciseIdx === level.length - 1;
+  const lastLv = s.levelIdx === levels.length - 1;
+
+  if (s.phase === PHASES.PREP) {
+    s.phase = PHASES.WORK; s.timeLeft = cfg.workTime; announce('Work!'); return;
+  }
+
+  if (s.phase === PHASES.WORK) {
+    if (lastEx) {
+      if (lastLv) {
+        s.phase = PHASES.DONE; s.timeLeft = 0; announce('Session complete! Great job!'); return;
+      }
+      if (cfg.breakTime > 0) {
+        s.phase = PHASES.BREAK; s.timeLeft = cfg.breakTime; announce('Rest!'); return;
+      }
+      s.levelIdx++; s.exerciseIdx = 0;
+      s.phase = PHASES.WORK; s.timeLeft = cfg.workTime;
+      announce(`Level ${s.levelIdx + 1}. Work!`); return;
+    }
+    if (cfg.restTime > 0) {
+      s.phase = PHASES.REST; s.timeLeft = cfg.restTime; announce('Rest!'); return;
+    }
+    s.exerciseIdx++; s.phase = PHASES.WORK; s.timeLeft = cfg.workTime; announce('Work!'); return;
+  }
+
+  if (s.phase === PHASES.REST) {
+    s.exerciseIdx++; s.phase = PHASES.WORK; s.timeLeft = cfg.workTime; announce('Work!'); return;
+  }
+
+  if (s.phase === PHASES.BREAK) {
+    s.levelIdx++; s.exerciseIdx = 0;
+    s.phase = PHASES.WORK; s.timeLeft = cfg.workTime;
+    announce(`Level ${s.levelIdx + 1}. Work!`); return;
   }
 }
 
@@ -196,14 +225,11 @@ function nextPhase() {
 function tick() {
   if (state.paused || state.phase === PHASES.DONE) return;
 
-  // 3-second countdown beeps
   if (state.timeLeft <= 3 && state.timeLeft > 0) playBeep(660, 0.1);
 
   state.timeLeft--;
 
-  if (state.timeLeft <= 0 && state.phase !== PHASES.DONE) {
-    nextPhase();
-  }
+  if (state.timeLeft <= 0 && state.phase !== PHASES.DONE) nextPhase();
 
   renderTimer();
 }
@@ -213,7 +239,7 @@ const phaseLabels = {
   [PHASES.PREP]:  'Get Ready',
   [PHASES.WORK]:  'Work!',
   [PHASES.REST]:  'Rest',
-  [PHASES.BREAK]: 'Round Break',
+  [PHASES.BREAK]: 'Break',
   [PHASES.DONE]:  'Done!',
 };
 
@@ -223,16 +249,61 @@ function renderTimer() {
 
   document.getElementById('phase-label').textContent = phaseLabels[s.phase] ?? s.phase;
   document.getElementById('countdown').textContent   = s.timeLeft;
+  document.getElementById('btn-pause').textContent   = s.paused ? 'Resume' : 'Pause';
+  document.body.className = `phase-${s.phase}`;
+
+  if (cfg.mode === 'pyramid') {
+    renderTimerPyramid(s, cfg);
+  } else {
+    renderTimerStandard(s, cfg);
+  }
+}
+
+function renderTimerStandard(s, cfg) {
   document.getElementById('exercise-name').textContent =
     s.phase === PHASES.DONE ? '' : cfg.exercises[s.exerciseIdx] ?? '';
-  document.getElementById('cur-round').textContent    = s.round;
-  document.getElementById('tot-rounds').textContent   = cfg.rounds;
-  document.getElementById('cur-exercise').textContent = s.exerciseIdx + 1;
+  document.getElementById('lbl-round').textContent     = 'Round';
+  document.getElementById('cur-round').textContent     = s.round;
+  document.getElementById('tot-rounds').textContent    = cfg.rounds;
+  document.getElementById('cur-exercise').textContent  = s.exerciseIdx + 1;
   document.getElementById('tot-exercises').textContent = cfg.exercises.length;
-  document.getElementById('btn-pause').textContent    = s.paused ? 'Resume' : 'Pause';
+  document.getElementById('level-exercises').innerHTML = '';
+}
 
-  // colour class on body
-  document.body.className = `phase-${s.phase}`;
+function renderTimerPyramid(s, cfg) {
+  const levels = cfg.pyramidLevels;
+  const lvIdx  = Math.min(s.levelIdx, levels.length - 1);
+  const level  = levels[lvIdx];
+
+  document.getElementById('exercise-name').textContent =
+    s.phase === PHASES.DONE ? '' : level[s.exerciseIdx] ?? '';
+  document.getElementById('lbl-round').textContent     = 'Level';
+  document.getElementById('cur-round').textContent     = lvIdx + 1;
+  document.getElementById('tot-rounds').textContent    = levels.length;
+  document.getElementById('cur-exercise').textContent  = s.exerciseIdx + 1;
+  document.getElementById('tot-exercises').textContent = level.length;
+
+  const el = document.getElementById('level-exercises');
+
+  if (s.phase === PHASES.DONE) {
+    el.innerHTML = '';
+    return;
+  }
+
+  // During break, preview the next level's exercises
+  if (s.phase === PHASES.BREAK) {
+    const next = levels[lvIdx + 1];
+    if (next) {
+      el.innerHTML = `<span class="ex-next-label">Next level: </span>` +
+        next.map(ex => `<span class="ex-chip">${ex}</span>`).join('<span class="ex-sep">→</span>');
+    }
+    return;
+  }
+
+  // During work/rest/prep: show current level chips, active one highlighted
+  el.innerHTML = level.map((ex, i) =>
+    `<span class="ex-chip ${i === s.exerciseIdx && s.phase === PHASES.WORK ? 'ex-active' : ''}">${ex}</span>`
+  ).join('<span class="ex-sep">→</span>');
 }
 
 // ── Session control ────────────────────────────────────────────────────────
@@ -247,7 +318,7 @@ function startSession() {
   ticker = setInterval(tick, 1000);
 
   if (state.phase === PHASES.PREP) announce('Get ready!');
-  else announce('Work!');
+  else announce(config.mode === 'pyramid' ? 'Level 1. Work!' : 'Work!');
 }
 
 function pauseSession() {
@@ -266,8 +337,8 @@ function resetSession() {
 
 // ── Exercise list builder ──────────────────────────────────────────────────
 function addExerciseRow(name = '') {
-  const list = document.getElementById('exercise-list');
-  const row  = document.createElement('div');
+  const list  = document.getElementById('exercise-list');
+  const row   = document.createElement('div');
   row.className = 'exercise-row';
 
   const input = document.createElement('input');
@@ -285,6 +356,22 @@ function addExerciseRow(name = '') {
   list.appendChild(row);
 }
 
+// ── Mode toggle ────────────────────────────────────────────────────────────
+const MODE_HINTS = {
+  standard: 'Cycle through all exercises each round.',
+  pyramid:  'Build up A → A,B → A,B,C → … then back down.',
+};
+
+function setMode(mode) {
+  document.getElementById('cfg-mode').value = mode;
+  document.querySelectorAll('.mode-btn').forEach(btn =>
+    btn.classList.toggle('active', btn.dataset.mode === mode)
+  );
+  document.getElementById('cfg-rounds-section').style.display =
+    mode === 'pyramid' ? 'none' : '';
+  document.getElementById('mode-hint').textContent = MODE_HINTS[mode] ?? '';
+}
+
 // ── View switching ─────────────────────────────────────────────────────────
 function showView(name) {
   document.getElementById('view-config').classList.toggle('active', name === 'config');
@@ -294,6 +381,10 @@ function showView(name) {
 // ── Init ───────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   addExerciseRow('Exercise 1');
+
+  document.querySelectorAll('.mode-btn').forEach(btn =>
+    btn.addEventListener('click', () => setMode(btn.dataset.mode))
+  );
 
   document.getElementById('btn-add-exercise').addEventListener('click', () => addExerciseRow());
   document.getElementById('btn-load-config').addEventListener('click', loadConfig);
