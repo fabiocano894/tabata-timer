@@ -120,9 +120,10 @@ function buildConfig() {
 
   if (mode === 'pyramid') {
     const n      = exercises.length;
-    const levels = [];
-    for (let i = 0;     i < n;     i++) levels.push(exercises.slice(0, i + 1));
-    for (let i = n - 2; i >= 0;    i--) levels.push(exercises.slice(0, i + 1));
+    const levels   = [];
+    const reversed = [...exercises].reverse();
+    for (let i = 0; i < n; i++) levels.push(exercises.slice(0, i + 1));       // up:   [A]→[A,B]→…→[A…N]
+    for (let i = 0; i < n; i++) levels.push(reversed.slice(0, n - i));        // down: [N…A]→[N…B]→…→[N]
     base.pyramidLevels = levels;
   }
 
