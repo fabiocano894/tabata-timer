@@ -31,9 +31,11 @@ function announce(text) {
   window.speechSynthesis.speak(u);
 }
 
-// ── File persistence (File System Access API) ─────────────────────────────
-let fileHandle = null;
+// ── File persistence ───────────────────────────────────────────────────────
+// Electron path  → uses native dialog via IPC (window.electronAPI)
+// Browser path   → uses File System Access API as fallback
 
+let fileHandle = null; // used only in browser path
 const FILE_TYPES = [{ description: 'JSON', accept: { 'application/json': ['.json'] } }];
 
 function setFileStatus(msg, type = '') {
@@ -57,16 +59,30 @@ function fillForm(cfg) {
   exercises.forEach(name => addExerciseRow(name));
 }
 
+function basename(filePath) {
+  return filePath.split(/[\\/]/).pop();
+}
+
 async function loadConfig() {
-  if (!window.showOpenFilePicker) {
-    setFileStatus('File System API not supported in this browser.', 'err');
+  // ── Electron ──
+  if (window.electronAPI) {
+    const result = await window.electronAPI.loadConfig();
+    if (!result.success) return;
+    fillForm(result.config);
+    updateTotalDisplay();
+    setFileStatus(`Loaded: ${basename(result.filePath)}`, 'ok');
     return;
+  }
+  // ── Browser fallback ──
+  if (!window.showOpenFilePicker) {
+    setFileStatus('File System API not supported in this browser.', 'err'); return;
   }
   try {
     [fileHandle] = await window.showOpenFilePicker({ types: FILE_TYPES });
     const file   = await fileHandle.getFile();
     const cfg    = JSON.parse(await file.text());
     fillForm(cfg);
+    updateTotalDisplay();
     setFileStatus(`Loaded: ${file.name}`, 'ok');
   } catch (e) {
     if (e.name !== 'AbortError') setFileStatus('Failed to load file.', 'err');
@@ -74,15 +90,21 @@ async function loadConfig() {
 }
 
 async function saveConfig() {
-  if (!window.showSaveFilePicker) {
-    setFileStatus('File System API not supported in this browser.', 'err');
+  // ── Electron ──
+  if (window.electronAPI) {
+    const result = await window.electronAPI.saveConfig(buildConfig());
+    if (!result.success) return;
+    setFileStatus(`Saved: ${basename(result.filePath)}`, 'ok');
     return;
+  }
+  // ── Browser fallback ──
+  if (!window.showSaveFilePicker) {
+    setFileStatus('File System API not supported in this browser.', 'err'); return;
   }
   try {
     if (!fileHandle) {
       fileHandle = await window.showSaveFilePicker({
-        suggestedName: 'tabata-config.json',
-        types: FILE_TYPES,
+        suggestedName: 'tabata-config.json', types: FILE_TYPES,
       });
     }
     const writable = await fileHandle.createWritable();
