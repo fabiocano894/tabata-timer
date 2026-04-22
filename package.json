@@ -12,7 +12,7 @@
   "config": {
     "forge": {
       "packagerConfig": {
-        "asar": true,
+        "asar": { "unpack": "**/*.node" },
         "name": "Tabata Timer"
       },
       "makers": [
@@ -37,6 +37,10 @@
     "@electron-forge/cli": "^7.11.1",
     "@electron-forge/maker-squirrel": "^7.11.1",
     "@electron-forge/maker-zip": "^7.11.1",
-    "electron": "^41.2.2"
+    "electron": "^41.2.2",
+    "electron-rebuild": "^3.2.9"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.9.0"
   }
 }

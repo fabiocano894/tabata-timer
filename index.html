@@ -8,10 +8,30 @@
 </head>
 <body>
 
-  <!-- CONFIG VIEW -->
+  <!-- ── CONFIG VIEW ────────────────────────────────────────────────────── -->
   <div id="view-config" class="view active">
-    <h1>Tabata Timer</h1>
 
+    <div class="app-header">
+      <h1>Tabata Timer</h1>
+      <button class="btn-header" id="btn-show-history" title="Session History">History</button>
+    </div>
+
+    <!-- Profiles -->
+    <section class="card">
+      <h2>Profile</h2>
+      <div class="profile-load-row">
+        <select id="profile-select"><option value="">— no profile —</option></select>
+        <button class="btn-sm" id="btn-load-profile">Load</button>
+        <button class="btn-sm btn-danger" id="btn-delete-profile">Delete</button>
+      </div>
+      <div class="profile-save-row">
+        <input type="text" id="profile-name" placeholder="Save current as…" maxlength="40" />
+        <button class="btn-sm btn-accent" id="btn-save-profile">Save</button>
+      </div>
+      <p id="profile-status"></p>
+    </section>
+
+    <!-- Mode -->
     <section class="card">
       <h2>Mode</h2>
       <input type="hidden" id="cfg-mode" value="standard" />
@@ -22,6 +42,7 @@
       <p class="mode-hint" id="mode-hint">Cycle through all exercises each round.</p>
     </section>
 
+    <!-- Rounds (hidden in pyramid mode) -->
     <section class="card" id="cfg-rounds-section">
       <h2>Session</h2>
       <label>Rounds
@@ -29,40 +50,27 @@
       </label>
     </section>
 
+    <!-- Phases -->
     <section class="card">
       <h2>Phases (seconds)</h2>
-      <label>Get Ready
-        <input type="number" id="cfg-prep" min="0" max="300" value="10" />
-      </label>
-      <label>Work
-        <input type="number" id="cfg-work" min="1" max="300" value="20" />
-      </label>
-      <label>Rest
-        <input type="number" id="cfg-rest" min="0" max="300" value="10" />
-      </label>
-      <label>Level Break
-        <input type="number" id="cfg-break" min="0" max="300" value="60" />
-      </label>
+      <label>Get Ready  <input type="number" id="cfg-prep"  min="0" max="300" value="10" /></label>
+      <label>Work       <input type="number" id="cfg-work"  min="1" max="300" value="20" /></label>
+      <label>Rest       <input type="number" id="cfg-rest"  min="0" max="300" value="10" /></label>
+      <label>Level Break<input type="number" id="cfg-break" min="0" max="300" value="60" /></label>
     </section>
 
+    <!-- Exercises -->
     <section class="card">
       <h2>Exercises</h2>
       <div id="exercise-list"></div>
       <button class="btn-secondary" id="btn-add-exercise">+ Add Exercise</button>
     </section>
 
-    <div class="file-actions">
-      <button class="btn-file" id="btn-load-config">Load Config</button>
-      <button class="btn-file" id="btn-save-config">Save Config</button>
-    </div>
-    <div id="file-status"></div>
-
     <div id="session-total">Total session: <span>—</span></div>
-
     <button class="btn-primary" id="btn-start">Start Session</button>
   </div>
 
-  <!-- TIMER VIEW -->
+  <!-- ── TIMER VIEW ─────────────────────────────────────────────────────── -->
   <div id="view-timer" class="view">
     <div id="phase-label">GET READY</div>
     <div id="exercise-name"></div>
@@ -73,11 +81,19 @@
       &nbsp;·&nbsp;
       Exercise <span id="cur-exercise">1</span> / <span id="tot-exercises">1</span>
     </div>
-
     <div class="timer-controls">
       <button class="btn-secondary" id="btn-pause">Pause</button>
       <button class="btn-secondary" id="btn-reset">Reset</button>
     </div>
+  </div>
+
+  <!-- ── HISTORY VIEW ───────────────────────────────────────────────────── -->
+  <div id="view-history" class="view">
+    <div class="app-header">
+      <button class="btn-header" id="btn-hide-history">← Back</button>
+      <h1>History</h1>
+    </div>
+    <div id="history-list"><p class="empty-msg">No sessions yet.</p></div>
   </div>
 
   <script src="app.js"></script>
